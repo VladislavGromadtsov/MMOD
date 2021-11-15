@@ -109,8 +109,10 @@ def generate_report(lambda_, mu, p, n, m, t, stats):
     time_now = datetime.now().strftime('%d%m%Y_%H%M%S')
     filename = 'result_%s.md' % (time_now,)
     hist_name = time_now + '.png'
+    hist_name_1 = time_now + '-1' + '.png'
     hist_name_2 = time_now + '-2' + '.png'
     hist_name_3 = time_now + '-3' + '.png'
+    hist_name_4 = time_now + '-4' + '.png'
 
     with open(os.path.join(path, filename), 'w', encoding='utf-8') as f:
         doc = mg.Writer(f)
@@ -141,15 +143,36 @@ def generate_report(lambda_, mu, p, n, m, t, stats):
         beta = 1 / (t * mu)
         probs = get_state_probs(_rho, n, m, beta)
 
+        theor_requests = []
+        for i in range(0, len(probs)):
+            for j in range(0, int(probs[i] * 10000)):
+                theor_requests.append(i)
+
+        plt.clf()
+        plt.xticks(states_bins)
+        plt.hist(theor_requests, bins=np.array(states_bins), density=True)
+        plt.savefig(os.path.join(hists_path, hist_name_1))
+
+        plt.clf()
+        plt.plot(states_bins, probs, label="Theoretic")
+        plt.plot(states_bins, states_counts / sum(states_counts), label="Practical")
+        plt.legend()
+        plt.savefig(os.path.join(hists_path, hist_name_4))
+
         doc.writelines([
-            'Вероятности для состояний системы:',
+            'Теоретические вероятности для состояний системы:',
+            '![hist](%s)' % (os.path.join(hists_dir_name, hist_name_1),), '',
+            'Практические вероятности для состояний системы:',
             '![hist](%s)' % (os.path.join(hists_dir_name, hist_name),), '',
+            'Сравнительный график теоретической и практической вероятностей системы:',
+            '![hist](%s)' % (os.path.join(hists_dir_name, hist_name_4),), '',
             pd.DataFrame(data={
                 'Теоретическая вероятность': probs,
                 'Практическая вероятность': states_counts / sum(states_counts)
             }).T.to_markdown(), ''
         ])
 
+        plt.clf()
         plt.plot(stats.times_graphics, stats.finished_req_graphics, label="Finished")
         plt.plot(stats.times_graphics, stats.cancelled_req_graphics, label="Cancelled")
         plt.legend()
